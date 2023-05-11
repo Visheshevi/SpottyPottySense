@@ -23,7 +23,6 @@ void setup() {
   // put your setup code here, to run once:
   // Serial port for debugging purposes
   Serial.begin(115200);
-  Serial.println("Init setup()");
   // PIR Motion Sensor mode INPUT_PULLUP
   pinMode(motionSensor, INPUT_PULLUP);
 
@@ -33,7 +32,6 @@ void setup() {
   // Set LED to LOW
   pinMode(led, OUTPUT);
   digitalWrite(led, LOW);
-  Serial.println("setup complete");
 }
 
 void loop()
