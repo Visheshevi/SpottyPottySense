@@ -16,6 +16,7 @@ IRAM_ATTR void detectsMovement() {
   digitalWrite(led, HIGH);
   startTimer = true;
   lastTrigger = millis();
+  Serial.println("Motion DETECTED!!");
 }
 
 
