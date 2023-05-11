@@ -1,6 +1,6 @@
 #include <Arduino.h>
-
-#define timeSeconds 2
+#include <ESP8266WiFi.h>
+#include "constants.h"
 
 // Set GPIOs for LED and PIR Motion Sensor
 const int led = 14;
@@ -19,10 +19,35 @@ IRAM_ATTR void detectsMovement() {
   Serial.println("Motion DETECTED!!");
 }
 
+/*
+* Connect your controller to WiFi
+*/
+void connectToWifi()
+{
+  Serial.println("Connecting to WiFi...");
+  WiFi.begin(ssid, password);
+  int retries = 0;
+
+  while((WiFi.status() != WL_CONNECTED) && (retries < 15))
+  {
+    retries++;
+    delay(500);
+    Serial.print(".");
+  }
+  if(retries > 14)
+  {
+    Serial.println("WiFi connection Failed!!!");
+  }
+
+  if(WiFi.status() == WL_CONNECTED)
+  {
+    Serial.println("WiFi connected!!!");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+  }
+}
 
 void setup() {
-  // put your setup code here, to run once:
-  // Serial port for debugging purposes
   Serial.begin(115200);
   // PIR Motion Sensor mode INPUT_PULLUP
   pinMode(motionSensor, INPUT_PULLUP);
@@ -33,11 +58,29 @@ void setup() {
   // Set LED to LOW
   pinMode(led, OUTPUT);
   digitalWrite(led, LOW);
+
+  connectToWifi();
 }
 
 void loop()
  {
-    // put your main code here, to run repeatedly:
+    // Check WiFi connection
+    if((WiFi.status() != WL_CONNECTED))
+    {
+      Serial.println("WiFi disconnected!! Trying to Connect Again");
+      WiFi.disconnect();
+      connectToWifi();
+
+      if(WiFi.status() != WL_CONNECTED)
+      {
+        delay(5000);
+        return;
+      }
+      Serial.println("WiFi Connected!!!");
+      Serial.print("IP address: ");
+      Serial.println(WiFi.localIP());
+    }
+
     // Current time
     now = millis();
 
