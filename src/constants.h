@@ -1,3 +1,6 @@
+#ifndef __CONSTANTS_H__
+#define __CONSTANTS_H__
+
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
@@ -27,3 +30,4 @@ const char* motion_detect_topic = "motionDetect";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
+#endif // __CONSTANTS_H__
