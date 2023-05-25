@@ -1,7 +1,8 @@
-#include <Arduino.h>
-#include "constants.h"
-#include "mqttConnect.cpp"
-#include "wifiConnect.cpp"
+#include "main.h"
+
+
+WiFiClient espClient;
+PubSubClient client(espClient);
 
 // Checks if motion was detected, sets LED HIGH and starts a timer
 IRAM_ATTR void detectsMovement()

@@ -12,22 +12,32 @@ const int led = 14;
 const int motionSensor = 4;
 
 // Timer: Auxiliary variables
-unsigned long now = millis();
-unsigned long lastTrigger = 0;
-boolean startTimer = false;
+extern unsigned long now;
+extern unsigned long lastTrigger;
+extern boolean startTimer;
 
 // WiFI Creds=entials
-const char* ssid = "YOUR_SSID_HERE";
-const char* password = "WIFI_PASSWORD_HERE";
+extern const char* ssid;
+extern const char* password;
 
 // MQTT Credentials
-const char* mqtt_server = "MQTT_SERVER_IP_HERE";
-const char* mqtt_user = "MQTT_USER_NAME";
-const char* mqtt_pass = "MQTT_PASSWORD";
-const int mqtt_port = 1883;
+extern const char* mqtt_server;
+extern const char* mqtt_user;
+extern const char* mqtt_pass;
+extern const int mqtt_port;
 
-const char* motion_detect_topic = "motionDetect";
+extern const char* motion_detect_topic;
 
-WiFiClient espClient;
-PubSubClient client(espClient);
+extern WiFiClient espClient;
+extern PubSubClient client;
+
+// MQTT function definitions
+void publish(const char* topic_name, const char* message);
+void setMQTTClient();
+
+// WiFi function Defintions
+void connectToWifi();
+void WifiConnectionStatus();
+
+
 #endif // __CONSTANTS_H__
