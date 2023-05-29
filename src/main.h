@@ -7,8 +7,8 @@ const char* mqtt_user = "MQTT_USER_NAME";
 const char* mqtt_pass = "MQTT_PASSWORD";
 const int mqtt_port = 1883;
 
-const char* ssid = "E.L.S.A";
-const char* password = "funnypear2905";
+const char* ssid = "WIFI_SSID";
+const char* password = "WIFI_PASS";
 
 unsigned long now = millis();
 unsigned long lastTrigger = 0;
