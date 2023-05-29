@@ -6,7 +6,7 @@
 #include <PubSubClient.h>
 
 #define timeSeconds 2
- 
+
 // Set GPIOs for LED and PIR Motion Sensor
 const int led = 14;
 const int motionSensor = 4;

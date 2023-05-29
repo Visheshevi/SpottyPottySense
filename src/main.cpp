@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include "main.h"
 
 
@@ -16,9 +17,11 @@ IRAM_ATTR void detectsMovement()
 
 void setup() 
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
   // PIR Motion Sensor mode INPUT_PULLUP
   pinMode(motionSensor, INPUT_PULLUP);
+
+  Serial.println("We are here....!");
 
   // Set motionSensor pin as interrupt, assign interrupt function and set RISING mode
   attachInterrupt(digitalPinToInterrupt(motionSensor), detectsMovement, RISING);
