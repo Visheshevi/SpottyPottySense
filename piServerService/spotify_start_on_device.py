@@ -34,7 +34,7 @@ def setup_headers(spotify_token, spotify_device_id):
 
 
 def request_device_to_play_spotify(heads):
-    global spotify_token
+    global spotify_token, stopped_because_no_motion
     trial = refresh_access_token()
     spotify_token = trial
     
@@ -42,15 +42,16 @@ def request_device_to_play_spotify(heads):
     curr_time = int(round(time.time()))
     cutoffTime_seconds = cutoffTime*60
     time_diff = curr_time - (millisec//1000)
-    if time_diff > cutoffTime_seconds : 
-        logging.info(f"Cuurent Time[{curr_time}], initial time[{millisec}], time difference[{time_diff}]")
+    logging.info(f"Attempting to start spotify: stopped because of no motion[{stopped_because_no_motion}], currentTime[{curr_time}], initial time[{millisec}], time difference[{time_diff}]")
+    if stopped_because_no_motion:
+        start_spotify()
+    elif time_diff > cutoffTime_seconds : 
         start_spotify()
     else:
         logging.info("Motion detected but I am either already playing or was already commanded to stop playing")
 
 def request_device_to_stop_spotify(heads):
-    global spotify_token
-    print("1")
+    global spotify_token, stopped_because_no_motion
     trial = refresh_access_token()
     spotify_token = trial
     heads = setup_headers(spotify_token, spotify_device_id)
@@ -63,6 +64,7 @@ def request_device_to_stop_spotify(heads):
             response = requests.put("https://api.spotify.com/v1/me/player/pause", headers=heads)
             if response.status_code == 204:
                 logging.info("Stopped Spotify playback")
+                stopped_because_no_motion = True
             else:
                 logging.info("Error stopping playback:", response.text)
         else:
@@ -70,9 +72,28 @@ def request_device_to_stop_spotify(heads):
     else:
         logging.info("Error getting playback state:", response.text)
 	
+def request_device_status(heads):
+    global spotify_token
+    trial = refresh_access_token()
+    spotify_token = trial
+    heads = setup_headers(spotify_token, spotify_device_id)
+    response = requests.get("https://api.spotify.com/v1/me/player", headers=heads)
+    if response.status_code == 200:
+        playback_data = response.json()
+        logging.info(f"Playback response[{playback_data}]")
+        if playback_data.get("is_playing"):
+            # User is currently playing, so stop playback
+            logging.info("Spotify is playing..")
+            return True
+        else:
+            logging.info("Spotify is not playing right now")
+            return False
+    else:
+        return False
 
 def start_spotify():
-    global millisec
+    global millisec, stopped_because_no_motion
+    stopped_because_no_motion = False
     logging.info("Attempting to start playing spotify in the bathroom")
     heads = setup_headers(spotify_token, spotify_device_id)
     response = requests.put(f"https://api.spotify.com/v1/me/player/play?device_id={spotify_device_id}", headers=heads)
