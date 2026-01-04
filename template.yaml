@@ -1,0 +1,901 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  SpottyPottySense v2.0
+  
+  Serverless IoT motion detection system that automatically plays Spotify
+  when motion is detected. Complete AWS infrastructure including IoT Core,
+  Lambda, DynamoDB, API Gateway, Cognito, and more.
+
+# ==============================================================================
+# METADATA
+# ==============================================================================
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: spotty-potty-sense
+    Description: Automatic Spotify playback on motion detection
+    Author: SpottyPottySense Team
+    SpdxLicenseId: MIT
+    LicenseUrl: LICENSE
+    ReadmeUrl: README.md
+    Labels: ['iot', 'spotify', 'motion-detection', 'home-automation']
+    HomePageUrl: https://github.com/yourusername/SpottyPottySense
+    SemanticVersion: 2.0.0
+    SourceCodeUrl: https://github.com/yourusername/SpottyPottySense
+
+# ==============================================================================
+# PARAMETERS
+# ==============================================================================
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name (dev, staging, or prod)
+
+  LogLevel:
+    Type: String
+    Default: INFO
+    AllowedValues:
+      - DEBUG
+      - INFO
+      - WARN
+      - ERROR
+    Description: Log level for Lambda functions
+
+  SpotifyDefaultTimeoutMinutes:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 60
+    Description: Minutes of inactivity before stopping Spotify playback
+
+  MotionDebounceMinutes:
+    Type: Number
+    Default: 2
+    MinValue: 1
+    MaxValue: 30
+    Description: Cooldown period between motion triggers (minutes)
+
+  TokenRefreshIntervalMinutes:
+    Type: Number
+    Default: 30
+    MinValue: 10
+    MaxValue: 120
+    Description: How often to refresh Spotify tokens (minutes)
+
+  TimeoutCheckIntervalMinutes:
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 5
+    Description: How often to check for session timeouts (minutes)
+
+  SessionTTLDays:
+    Type: Number
+    Default: 30
+    MinValue: 1
+    MaxValue: 365
+    Description: Days to retain session history before auto-deletion
+
+  EnableXRayTracing:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Enable AWS X-Ray distributed tracing
+
+  AlarmEmail:
+    Type: String
+    Default: ''
+    Description: Email address for CloudWatch alarms (optional)
+
+# ==============================================================================
+# CONDITIONS
+# ==============================================================================
+Conditions:
+  IsProduction: !Equals [!Ref Environment, 'prod']
+  IsDevelopment: !Equals [!Ref Environment, 'dev']
+  EnableXRay: !Equals [!Ref EnableXRayTracing, 'true']
+  CreateAlarms: !Not [!Equals [!Ref AlarmEmail, '']]
+
+# ==============================================================================
+# GLOBALS
+# ==============================================================================
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 30
+    MemorySize: !If [IsProduction, 512, 256]
+    Architectures:
+      - x86_64
+    Tracing: !If [EnableXRay, Active, PassThrough]
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        LOG_LEVEL: !Ref LogLevel
+        POWERTOOLS_SERVICE_NAME: spotty-potty-sense
+        POWERTOOLS_METRICS_NAMESPACE: SpottyPottySense
+        POWERTOOLS_LOG_LEVEL: !Ref LogLevel
+        SPOTIFY_DEFAULT_TIMEOUT_MINUTES: !Ref SpotifyDefaultTimeoutMinutes
+        MOTION_DEBOUNCE_MINUTES: !Ref MotionDebounceMinutes
+    Tags:
+      Environment: !Ref Environment
+      Project: SpottyPottySense
+      ManagedBy: SAM
+
+  Api:
+    Cors:
+      AllowOrigins:
+        - !If [IsProduction, 'https://app.spottypotty.example.com', 'http://localhost:5173']
+      AllowHeaders:
+        - Content-Type
+        - Authorization
+        - X-Api-Key
+      AllowMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+    Auth:
+      DefaultAuthorizer: CognitoAuthorizer
+      AddDefaultAuthorizerToCorsPreflight: false
+    TracingEnabled: !If [EnableXRay, true, false]
+
+# ==============================================================================
+# RESOURCES
+# ==============================================================================
+Resources:
+
+  # ============================================================================
+  # DYNAMODB TABLES
+  # ============================================================================
+
+  # --------------------------------------------------------------------------
+  # Sensors Table - Store sensor configuration and state
+  # --------------------------------------------------------------------------
+  SensorsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'SpottyPottySense-Sensors-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: sensorId
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: sensorId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserIdIndex
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: !If [IsProduction, true, false]
+      DeletionProtectionEnabled: !If [IsProduction, true, false]
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: TableType
+          Value: Configuration
+
+  # --------------------------------------------------------------------------
+  # Users Table - Store user profiles and preferences
+  # --------------------------------------------------------------------------
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'SpottyPottySense-Users-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: EmailIndex
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: !If [IsProduction, true, false]
+      DeletionProtectionEnabled: !If [IsProduction, true, false]
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: TableType
+          Value: UserData
+
+  # --------------------------------------------------------------------------
+  # Sessions Table - Track bathroom sessions for analytics
+  # --------------------------------------------------------------------------
+  SessionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'SpottyPottySense-Sessions-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: sessionId
+          AttributeType: S
+        - AttributeName: sensorId
+          AttributeType: S
+        - AttributeName: startTime
+          AttributeType: N
+      KeySchema:
+        - AttributeName: sessionId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: SensorIdIndex
+          KeySchema:
+            - AttributeName: sensorId
+              KeyType: HASH
+            - AttributeName: startTime
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: !If [IsProduction, true, false]
+      DeletionProtectionEnabled: !If [IsProduction, true, false]
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: TableType
+          Value: Analytics
+
+  # --------------------------------------------------------------------------
+  # MotionEvents Table - Detailed event log for analytics
+  # --------------------------------------------------------------------------
+  MotionEventsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'SpottyPottySense-MotionEvents-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: eventId
+          AttributeType: S
+        - AttributeName: sensorId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: N
+      KeySchema:
+        - AttributeName: eventId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: SensorTimestampIndex
+          KeySchema:
+            - AttributeName: sensorId
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: !If [IsProduction, true, false]
+      DeletionProtectionEnabled: !If [IsProduction, true, false]
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: TableType
+          Value: EventLog
+
+  # ============================================================================
+  # SECRETS MANAGER
+  # ============================================================================
+
+  # --------------------------------------------------------------------------
+  # Spotify Client Credentials Secret
+  # --------------------------------------------------------------------------
+  SpotifyClientCredentialsSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 'spotty-potty-sense/spotify/client-credentials-${Environment}'
+      Description: Spotify OAuth Client ID and Client Secret
+      SecretString: !Sub |
+        {
+          "client_id": "PLACEHOLDER_UPDATE_AFTER_DEPLOYMENT",
+          "client_secret": "PLACEHOLDER_UPDATE_AFTER_DEPLOYMENT"
+        }
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: Spotify
+
+  # ============================================================================
+  # COGNITO USER POOL
+  # ============================================================================
+
+  # --------------------------------------------------------------------------
+  # User Pool - Authentication for dashboard users
+  # --------------------------------------------------------------------------
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub 'SpottyPottySense-${Environment}'
+      AutoVerifiedAttributes:
+        - email
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: false
+        - Name: name
+          AttributeDataType: String
+          Required: false
+          Mutable: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: !If [IsProduction, 12, 8]
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: !If [IsProduction, true, false]
+      MfaConfiguration: !If [IsProduction, 'REQUIRED', 'OPTIONAL']
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      UserPoolTags:
+        Environment: !Ref Environment
+        Project: SpottyPottySense
+
+  # --------------------------------------------------------------------------
+  # User Pool Client - For dashboard web app
+  # --------------------------------------------------------------------------
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub 'SpottyPottySense-Dashboard-${Environment}'
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+      PreventUserExistenceErrors: ENABLED
+      RefreshTokenValidity: 30
+      AccessTokenValidity: 1
+      IdTokenValidity: 1
+      TokenValidityUnits:
+        RefreshToken: days
+        AccessToken: hours
+        IdToken: hours
+
+  # ============================================================================
+  # LAMBDA LAYERS
+  # ============================================================================
+
+  # --------------------------------------------------------------------------
+  # Common Layer - Shared utilities for all Lambda functions
+  # --------------------------------------------------------------------------
+  CommonLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub 'SpottyPottySense-Common-${Environment}'
+      Description: Shared utilities (Spotify client, DynamoDB helper, etc.)
+      ContentUri: backend/src/layers/common/
+      CompatibleRuntimes:
+        - python3.11
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: python3.11
+
+  # ============================================================================
+  # LAMBDA FUNCTIONS
+  # ============================================================================
+
+  # --------------------------------------------------------------------------
+  # Motion Handler Function - Process motion detection events
+  # --------------------------------------------------------------------------
+  MotionHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'SpottyPottySense-MotionHandler-${Environment}'
+      Description: Process motion detection events from IoT devices
+      CodeUri: backend/src/functions/motion-handler/
+      Handler: index.handler
+      Layers:
+        - !Ref CommonLayer
+      Environment:
+        Variables:
+          SENSORS_TABLE: !Ref SensorsTable
+          USERS_TABLE: !Ref UsersTable
+          SESSIONS_TABLE: !Ref SessionsTable
+          EVENTS_TABLE: !Ref MotionEventsTable
+          SPOTIFY_CREDENTIALS_SECRET: !Ref SpotifyClientCredentialsSecret
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SensorsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SessionsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MotionEventsTable
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref SpotifyClientCredentialsSecret
+                - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:spotty-potty-sense/spotify/users/*'
+      Events:
+        IoTMotionRule:
+          Type: IoTRule
+          Properties:
+            Sql: !Sub "SELECT *, topic(2) as sensorId FROM 'sensors/+/motion' WHERE event = 'motion_detected'"
+            AwsIotSqlVersion: '2016-03-23'
+
+  # --------------------------------------------------------------------------
+  # Token Refresher Function - Refresh Spotify OAuth tokens
+  # --------------------------------------------------------------------------
+  TokenRefresherFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'SpottyPottySense-TokenRefresher-${Environment}'
+      Description: Periodically refresh Spotify OAuth access tokens
+      CodeUri: backend/src/functions/token-refresher/
+      Handler: index.handler
+      Timeout: 60
+      Layers:
+        - !Ref CommonLayer
+      Environment:
+        Variables:
+          USERS_TABLE: !Ref UsersTable
+          SPOTIFY_CREDENTIALS_SECRET: !Ref SpotifyClientCredentialsSecret
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref UsersTable
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+                - secretsmanager:UpdateSecret
+              Resource:
+                - !Ref SpotifyClientCredentialsSecret
+                - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:spotty-potty-sense/spotify/users/*'
+      Events:
+        RefreshSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: !Sub 'rate(${TokenRefreshIntervalMinutes} minutes)'
+            Description: Trigger token refresh every N minutes
+            Enabled: true
+
+  # --------------------------------------------------------------------------
+  # Timeout Checker Function - Stop playback after inactivity
+  # --------------------------------------------------------------------------
+  TimeoutCheckerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'SpottyPottySense-TimeoutChecker-${Environment}'
+      Description: Check for inactive sessions and stop Spotify playback
+      CodeUri: backend/src/functions/timeout-checker/
+      Handler: index.handler
+      Layers:
+        - !Ref CommonLayer
+      Environment:
+        Variables:
+          SESSIONS_TABLE: !Ref SessionsTable
+          SENSORS_TABLE: !Ref SensorsTable
+          SPOTIFY_CREDENTIALS_SECRET: !Ref SpotifyClientCredentialsSecret
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SessionsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref SensorsTable
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref SpotifyClientCredentialsSecret
+                - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:spotty-potty-sense/spotify/users/*'
+      Events:
+        TimeoutCheckSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: !Sub 'rate(${TimeoutCheckIntervalMinutes} minute)'
+            Description: Check for session timeouts every N minutes
+            Enabled: true
+
+  # --------------------------------------------------------------------------
+  # Session Manager Function - Manage session lifecycle
+  # --------------------------------------------------------------------------
+  SessionManagerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'SpottyPottySense-SessionManager-${Environment}'
+      Description: Manage session creation, updates, and analytics
+      CodeUri: backend/src/functions/session-manager/
+      Handler: index.handler
+      Layers:
+        - !Ref CommonLayer
+      Environment:
+        Variables:
+          SESSIONS_TABLE: !Ref SessionsTable
+          EVENTS_TABLE: !Ref MotionEventsTable
+          SESSION_TTL_DAYS: !Ref SessionTTLDays
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SessionsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MotionEventsTable
+
+  # --------------------------------------------------------------------------
+  # Device Registration Function - Provision new IoT devices
+  # --------------------------------------------------------------------------
+  DeviceRegistrationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'SpottyPottySense-DeviceRegistration-${Environment}'
+      Description: Register and provision new IoT sensors
+      CodeUri: backend/src/functions/device-registration/
+      Handler: index.handler
+      Timeout: 60
+      Layers:
+        - !Ref CommonLayer
+      Environment:
+        Variables:
+          SENSORS_TABLE: !Ref SensorsTable
+          IOT_POLICY_NAME: !Ref IoTDevicePolicy
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SensorsTable
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - iot:CreateThing
+                - iot:CreateKeysAndCertificate
+                - iot:AttachThingPrincipal
+                - iot:AttachPolicy
+                - iot:DescribeThing
+              Resource: '*'
+
+  # --------------------------------------------------------------------------
+  # API Handler Function - REST API backend for dashboard
+  # --------------------------------------------------------------------------
+  ApiHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'SpottyPottySense-ApiHandler-${Environment}'
+      Description: REST API for dashboard - CRUD operations
+      CodeUri: backend/src/functions/api-handler/
+      Handler: index.handler
+      Timeout: 30
+      MemorySize: 512
+      Layers:
+        - !Ref CommonLayer
+      Environment:
+        Variables:
+          SENSORS_TABLE: !Ref SensorsTable
+          USERS_TABLE: !Ref UsersTable
+          SESSIONS_TABLE: !Ref SessionsTable
+          EVENTS_TABLE: !Ref MotionEventsTable
+          SPOTIFY_CREDENTIALS_SECRET: !Ref SpotifyClientCredentialsSecret
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SensorsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref SessionsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref MotionEventsTable
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref SpotifyClientCredentialsSecret
+                - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:spotty-potty-sense/spotify/users/*'
+      Events:
+        # Sensor endpoints
+        ListSensors:
+          Type: Api
+          Properties:
+            Path: /sensors
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        CreateSensor:
+          Type: Api
+          Properties:
+            Path: /sensors
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetSensor:
+          Type: Api
+          Properties:
+            Path: /sensors/{id}
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        UpdateSensor:
+          Type: Api
+          Properties:
+            Path: /sensors/{id}
+            Method: PUT
+            Auth:
+              Authorizer: CognitoAuthorizer
+        DeleteSensor:
+          Type: Api
+          Properties:
+            Path: /sensors/{id}
+            Method: DELETE
+            Auth:
+              Authorizer: CognitoAuthorizer
+        # User endpoints
+        GetUser:
+          Type: Api
+          Properties:
+            Path: /users/me
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        UpdateUser:
+          Type: Api
+          Properties:
+            Path: /users/me
+            Method: PUT
+            Auth:
+              Authorizer: CognitoAuthorizer
+        # Spotify endpoints
+        GetSpotifyDevices:
+          Type: Api
+          Properties:
+            Path: /spotify/devices
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        TestSpotifyPlayback:
+          Type: Api
+          Properties:
+            Path: /spotify/test
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        # Analytics endpoints
+        GetSessions:
+          Type: Api
+          Properties:
+            Path: /sessions
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetAnalytics:
+          Type: Api
+          Properties:
+            Path: /analytics
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  # ============================================================================
+  # API GATEWAY
+  # ============================================================================
+
+  # --------------------------------------------------------------------------
+  # API Gateway with Cognito Authorizer
+  # --------------------------------------------------------------------------
+  ApiGatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub 'SpottyPottySense-API-${Environment}'
+      StageName: !Ref Environment
+      TracingEnabled: !If [EnableXRay, true, false]
+      Auth:
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt UserPool.Arn
+            Identity:
+              Header: Authorization
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          LoggingLevel: !If [IsDevelopment, INFO, ERROR]
+          DataTraceEnabled: !If [IsDevelopment, true, false]
+          MetricsEnabled: true
+          ThrottlingBurstLimit: !If [IsProduction, 2000, 200]
+          ThrottlingRateLimit: !If [IsProduction, 1000, 100]
+
+  # ============================================================================
+  # AWS IOT CORE
+  # ============================================================================
+
+  # --------------------------------------------------------------------------
+  # IoT Policy for sensor devices
+  # --------------------------------------------------------------------------
+  IoTDevicePolicy:
+    Type: AWS::IoT::Policy
+    Properties:
+      PolicyName: !Sub 'SpottyPottySense-SensorPolicy-${Environment}'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - iot:Connect
+            Resource:
+              - !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:client/${!iot:Connection.Thing.ThingName}'
+          - Effect: Allow
+            Action:
+              - iot:Publish
+            Resource:
+              - !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/sensors/*/motion'
+              - !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/sensors/*/status'
+              - !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/sensors/*/register'
+          - Effect: Allow
+            Action:
+              - iot:Subscribe
+            Resource:
+              - !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topicfilter/sensors/*/config'
+              - !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topicfilter/sensors/*/commands'
+          - Effect: Allow
+            Action:
+              - iot:Receive
+            Resource:
+              - !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/sensors/*/config'
+              - !Sub 'arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/sensors/*/commands'
+
+  # ============================================================================
+  # CLOUDWATCH LOG GROUPS
+  # ============================================================================
+
+  MotionHandlerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/SpottyPottySense-MotionHandler-${Environment}'
+      RetentionInDays: !If [IsProduction, 90, 7]
+
+  TokenRefresherLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/SpottyPottySense-TokenRefresher-${Environment}'
+      RetentionInDays: !If [IsProduction, 90, 7]
+
+  TimeoutCheckerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/SpottyPottySense-TimeoutChecker-${Environment}'
+      RetentionInDays: !If [IsProduction, 90, 7]
+
+  SessionManagerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/SpottyPottySense-SessionManager-${Environment}'
+      RetentionInDays: !If [IsProduction, 90, 7]
+
+  DeviceRegistrationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/SpottyPottySense-DeviceRegistration-${Environment}'
+      RetentionInDays: !If [IsProduction, 90, 7]
+
+  ApiHandlerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/SpottyPottySense-ApiHandler-${Environment}'
+      RetentionInDays: !If [IsProduction, 90, 7]
+
+# ==============================================================================
+# OUTPUTS
+# ==============================================================================
+Outputs:
+  # DynamoDB Tables
+  SensorsTableName:
+    Description: Sensors DynamoDB table name
+    Value: !Ref SensorsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-SensorsTable'
+
+  UsersTableName:
+    Description: Users DynamoDB table name
+    Value: !Ref UsersTable
+    Export:
+      Name: !Sub '${AWS::StackName}-UsersTable'
+
+  SessionsTableName:
+    Description: Sessions DynamoDB table name
+    Value: !Ref SessionsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-SessionsTable'
+
+  MotionEventsTableName:
+    Description: Motion Events DynamoDB table name
+    Value: !Ref MotionEventsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-MotionEventsTable'
+
+  # Lambda Functions
+  MotionHandlerFunctionArn:
+    Description: Motion Handler Lambda Function ARN
+    Value: !GetAtt MotionHandlerFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-MotionHandlerArn'
+
+  TokenRefresherFunctionArn:
+    Description: Token Refresher Lambda Function ARN
+    Value: !GetAtt TokenRefresherFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-TokenRefresherArn'
+
+  # API Gateway
+  ApiGatewayUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${ApiGatewayApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiUrl'
+
+  # Cognito
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref UserPool
+    Export:
+      Name: !Sub '${AWS::StackName}-UserPoolId'
+
+  UserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref UserPoolClient
+    Export:
+      Name: !Sub '${AWS::StackName}-UserPoolClientId'
+
+  # IoT Core
+  IoTEndpoint:
+    Description: AWS IoT Core endpoint for device connections
+    Value: !Sub '${AWS::AccountId}.iot.${AWS::Region}.amazonaws.com'
+    Export:
+      Name: !Sub '${AWS::StackName}-IoTEndpoint'
+
+  IoTPolicyName:
+    Description: IoT Policy name for devices
+    Value: !Ref IoTDevicePolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-IoTPolicyName'
+
+  # Secrets Manager
+  SpotifyCredentialsSecretArn:
+    Description: Spotify client credentials secret ARN
+    Value: !Ref SpotifyClientCredentialsSecret
+    Export:
+      Name: !Sub '${AWS::StackName}-SpotifyCredentialsSecret'
+
+  # Environment
+  EnvironmentName:
+    Description: Deployment environment
+    Value: !Ref Environment
+
+  StackName:
+    Description: CloudFormation stack name
+    Value: !Ref AWS::StackName
+
