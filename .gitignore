@@ -1,6 +1,279 @@
-.pio
-.vscode/.browse.c_cpp.db*
-.vscode/c_cpp_properties.json
-.vscode/launch.json
-.vscode/ipch
-.vscode/settings.json
+# SpottyPottySense v2.0 - Enterprise .gitignore
+
+# ============================================================================
+# AWS & Deployment
+# ============================================================================
+.aws-sam/
+samconfig.toml
+.aws/
+*.zip
+packaged.yaml
+cfn-output.json
+
+# AWS Credentials (NEVER commit)
+**/aws-credentials*
+**/credentials.json
+**/.aws-credentials
+
+# ============================================================================
+# Python
+# ============================================================================
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+backend/venv/
+backend/.venv/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+pytest.xml
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# ============================================================================
+# Node.js / Dashboard
+# ============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dashboard build output
+dashboard/dist/
+dashboard/build/
+dashboard/.vite/
+dashboard/.next/
+dashboard/out/
+
+# Dashboard env files (NEVER commit)
+dashboard/.env.local
+dashboard/.env.development.local
+dashboard/.env.test.local
+dashboard/.env.production.local
+dashboard/.env*.local
+
+# ============================================================================
+# IoT Device / Firmware
+# ============================================================================
+device-firmware/.pio/
+device-firmware/.vscode/
+device-firmware/.pioenvs/
+device-firmware/.piolibdeps/
+device-firmware/lib/
+device-firmware/build/
+device-firmware/*.bin
+device-firmware/*.hex
+device-firmware/*.elf
+
+# Device certificates (NEVER commit)
+device-firmware/certs/
+device-firmware/certificates/
+*.pem
+*.key
+*.crt
+*.der
+*-certificate.pem.crt
+*-private.pem.key
+*-public.pem.key
+AmazonRootCA*.pem
+
+# ============================================================================
+# Secrets & Configuration (NEVER commit)
+# ============================================================================
+# Environment variables
+.env
+.env.*
+!.env.example
+config/**/*.secret.*
+config/**/secrets.*
+
+# Spotify credentials
+**/spotify-credentials*
+**/spotify_credentials*
+**/.spotify
+
+# AWS IoT certificates
+iot/certs/
+iot/certificates/
+
+# Local configuration overrides
+config/**/local.*
+**/config.local.*
+
+# ============================================================================
+# IDEs & Editors
+# ============================================================================
+# VSCode
+.vscode/
+*.code-workspace
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+# IntelliJ / PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================================================
+# Operating System
+# ============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+
+# ============================================================================
+# Logs
+# ============================================================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+pip-log.txt
+
+# ============================================================================
+# Temporary Files
+# ============================================================================
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+
+# ============================================================================
+# Testing
+# ============================================================================
+.pytest_cache/
+.coverage
+htmlcov/
+.nyc_output/
+coverage/
+
+# ============================================================================
+# Documentation (generated)
+# ============================================================================
+docs/_build/
+site/
+
+# ============================================================================
+# Misc
+# ============================================================================
+.sass-cache/
+*.pid
+*.seed
+*.pid.lock
+.terraform/
+*.tfstate
+*.tfstate.backup
+
+# Keep these directories but ignore contents
+backend/src/functions/**/build/
+backend/src/functions/**/dist/
+
+# ============================================================================
+# Keep Important Files
+# ============================================================================
+# Explicitly keep example files
+!**/.env.example
+!**/config.example.*
+!**/template.example.*
+!**/README
+!**/README.md
+!**/.gitkeep
+
+# ============================================================================
+# Project Specific
+# ============================================================================
+# Local development overrides
+docker-compose.override.yml
+samconfig.local.toml
+
+# Large files / binaries
+*.mp4
+*.mov
+*.avi
+*.bin
+*.exe
+
+# Analytics / Metrics (local)
+analytics/
+metrics.json
+stats.json
