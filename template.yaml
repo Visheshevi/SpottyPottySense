@@ -7,21 +7,21 @@ Description: >
   when motion is detected. Complete AWS infrastructure including IoT Core,
   Lambda, DynamoDB, API Gateway, Cognito, and more.
 
-# ==============================================================================
-# METADATA
-# ==============================================================================
-Metadata:
-  AWS::ServerlessRepo::Application:
-    Name: spotty-potty-sense
-    Description: Automatic Spotify playback on motion detection
-    Author: SpottyPottySense Team
-    SpdxLicenseId: MIT
-    LicenseUrl: LICENSE
-    ReadmeUrl: README.md
-    Labels: ['iot', 'spotify', 'motion-detection', 'home-automation']
-    HomePageUrl: https://github.com/yourusername/SpottyPottySense
-    SemanticVersion: 2.0.0
-    SourceCodeUrl: https://github.com/yourusername/SpottyPottySense
+# # ==============================================================================
+# # METADATA
+# # ==============================================================================
+# Metadata:
+#   AWS::ServerlessRepo::Application:
+#     Name: spotty-potty-sense
+#     Description: Automatic Spotify playback on motion detection
+#     Author: SpottyPottySense Team
+#     SpdxLicenseId: MIT
+#     LicenseUrl: LICENSE
+#     ReadmeUrl: README.md
+#     Labels: ['iot', 'spotify', 'motion-detection', 'home-automation']
+#     HomePageUrl: https://github.com/yourusername/SpottyPottySense
+#     SemanticVersion: 2.0.0
+#     SourceCodeUrl: https://github.com/yourusername/SpottyPottySense
 
 # ==============================================================================
 # PARAMETERS
@@ -108,7 +108,7 @@ Conditions:
 # ==============================================================================
 Globals:
   Function:
-    Runtime: python3.11
+    Runtime: python3.13
     Timeout: 30
     MemorySize: !If [IsProduction, 512, 256]
     Architectures:
@@ -342,7 +342,7 @@ Resources:
           RequireLowercase: true
           RequireNumbers: true
           RequireSymbols: !If [IsProduction, true, false]
-      MfaConfiguration: !If [IsProduction, 'REQUIRED', 'OPTIONAL']
+      MfaConfiguration: !If [IsProduction, 'OPTIONAL','OFF']
       AccountRecoverySetting:
         RecoveryMechanisms:
           - Name: verified_email
@@ -387,10 +387,10 @@ Resources:
       Description: Shared utilities (Spotify client, DynamoDB helper, etc.)
       ContentUri: backend/src/layers/common/
       CompatibleRuntimes:
-        - python3.11
+        - python3.13
       RetentionPolicy: Retain
     Metadata:
-      BuildMethod: python3.11
+      BuildMethod: python3.13
 
   # ============================================================================
   # LAMBDA FUNCTIONS
