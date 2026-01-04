@@ -130,21 +130,9 @@ Globals:
 
   Api:
     Cors:
-      AllowOrigins:
-        - !If [IsProduction, 'https://app.spottypotty.example.com', 'http://localhost:5173']
-      AllowHeaders:
-        - Content-Type
-        - Authorization
-        - X-Api-Key
-      AllowMethods:
-        - GET
-        - POST
-        - PUT
-        - DELETE
-        - OPTIONS
-    Auth:
-      DefaultAuthorizer: CognitoAuthorizer
-      AddDefaultAuthorizerToCorsPreflight: false
+      AllowOrigin: !If [IsProduction, "'https://app.spottypotty.example.com'", "'*'"]
+      AllowHeaders: "'Content-Type,Authorization,X-Api-Key'"
+      AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
     TracingEnabled: !If [EnableXRay, true, false]
 
 # ==============================================================================
@@ -623,83 +611,72 @@ Resources:
         ListSensors:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayApi
             Path: /sensors
             Method: GET
-            Auth:
-              Authorizer: CognitoAuthorizer
         CreateSensor:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayApi
             Path: /sensors
             Method: POST
-            Auth:
-              Authorizer: CognitoAuthorizer
         GetSensor:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayApi
             Path: /sensors/{id}
             Method: GET
-            Auth:
-              Authorizer: CognitoAuthorizer
         UpdateSensor:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayApi
             Path: /sensors/{id}
             Method: PUT
-            Auth:
-              Authorizer: CognitoAuthorizer
         DeleteSensor:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayApi
             Path: /sensors/{id}
             Method: DELETE
-            Auth:
-              Authorizer: CognitoAuthorizer
         # User endpoints
         GetUser:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayApi
             Path: /users/me
             Method: GET
-            Auth:
-              Authorizer: CognitoAuthorizer
         UpdateUser:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayApi
             Path: /users/me
             Method: PUT
-            Auth:
-              Authorizer: CognitoAuthorizer
         # Spotify endpoints
         GetSpotifyDevices:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayApi
             Path: /spotify/devices
             Method: GET
-            Auth:
-              Authorizer: CognitoAuthorizer
         TestSpotifyPlayback:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayApi
             Path: /spotify/test
             Method: POST
-            Auth:
-              Authorizer: CognitoAuthorizer
         # Analytics endpoints
         GetSessions:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayApi
             Path: /sessions
             Method: GET
-            Auth:
-              Authorizer: CognitoAuthorizer
         GetAnalytics:
           Type: Api
           Properties:
+            RestApiId: !Ref ApiGatewayApi
             Path: /analytics
             Method: GET
-            Auth:
-              Authorizer: CognitoAuthorizer
 
   # ============================================================================
   # API GATEWAY
@@ -714,12 +691,15 @@ Resources:
       Name: !Sub 'SpottyPottySense-API-${Environment}'
       StageName: !Ref Environment
       TracingEnabled: !If [EnableXRay, true, false]
+      Cors:
+        AllowOrigin: !If [IsProduction, "'https://app.spottypotty.example.com'", "'*'"]
+        AllowHeaders: "'Content-Type,Authorization,X-Api-Key'"
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
       Auth:
+        DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt UserPool.Arn
-            Identity:
-              Header: Authorization
       MethodSettings:
         - ResourcePath: '/*'
           HttpMethod: '*'
