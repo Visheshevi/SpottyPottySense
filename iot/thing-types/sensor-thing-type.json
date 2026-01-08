@@ -1,0 +1,27 @@
+{
+  "thingTypeName": "SpottyPottySensor",
+  "thingTypeProperties": {
+    "thingTypeDescription": "Motion sensor for SpottyPottySense - triggers Spotify playback",
+    "searchableAttributes": [
+      "location",
+      "firmwareVersion",
+      "hardwareVersion",
+      "deploymentDate"
+    ]
+  },
+  "tags": [
+    {
+      "Key": "Project",
+      "Value": "SpottyPottySense"
+    },
+    {
+      "Key": "DeviceType",
+      "Value": "MotionSensor"
+    },
+    {
+      "Key": "ManagedBy",
+      "Value": "SAM"
+    }
+  ]
+}
+

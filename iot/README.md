@@ -1,17 +1,21 @@
 # AWS IoT Core Configuration
 
-AWS IoT policies and rules for SpottyPottySense devices.
+AWS IoT policies, rules, and configuration for SpottyPottySense devices.
 
 ## Directory Structure
 
 ```
 iot/
-├── policies/              # IoT device policies (JSON)
-│   └── sensor-policy.json
-├── rules/                 # IoT Rule Engine SQL
-│   ├── motion-detection-rule.sql
-│   └── device-registration-rule.sql
-└── README.md
+├── policies/                          # IoT device policies (JSON)
+│   └── sensor-policy.json            # Policy template for sensors
+├── rules/                             # IoT Rule Engine SQL
+│   ├── motion-detection-rule.sql     # Motion event routing
+│   └── device-registration-rule.sql  # Device registration routing
+├── thing-types/                       # IoT Thing Type definitions
+│   └── sensor-thing-type.json        # SpottyPottySensor thing type
+├── endpoints-config.json              # IoT Core endpoint configuration
+├── MQTT_TOPICS.md                     # Complete MQTT topic documentation
+└── README.md                          # This file
 ```
 
 ## Overview
