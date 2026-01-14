@@ -31,7 +31,7 @@ def handler(event, context):
     logger.info("API Handler invoked", extra={
         "http_method": event.get('httpMethod'),
         "path": event.get('path'),
-        "request_id": context.request_id
+        "request_id": context.aws_request_id
     })
     
     try:

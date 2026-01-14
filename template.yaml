@@ -69,7 +69,7 @@ Parameters:
 
   TimeoutCheckIntervalMinutes:
     Type: Number
-    Default: 1
+    Default: 2
     MinValue: 1
     MaxValue: 5
     Description: How often to check for session timeouts (minutes)
@@ -507,11 +507,11 @@ Resources:
                 - !Ref SpotifyClientCredentialsSecret
                 - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:spotty-potty-sense/spotify/users/*'
       Events:
-        TimeoutCheckSchedule:
-          Type: Schedule
-          Properties:
-            Schedule: !Sub 'rate(${TimeoutCheckIntervalMinutes} minute)'
-            Description: Check for session timeouts every N minutes
+          TimeoutCheckSchedule:
+            Type: Schedule
+            Properties:
+              Schedule: !Sub 'rate(${TimeoutCheckIntervalMinutes} minutes)'
+              Description: Check for session timeouts every N minutes
             Enabled: true
 
   # --------------------------------------------------------------------------

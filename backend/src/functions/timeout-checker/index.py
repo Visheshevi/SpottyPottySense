@@ -31,7 +31,7 @@ def handler(event, context):
     logger.info("Timeout Checker invoked", extra={
         "event": event,
         "function_name": context.function_name,
-        "request_id": context.request_id
+        "request_id": context.aws_request_id
     })
     
     try:
