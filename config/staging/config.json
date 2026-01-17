@@ -1,0 +1,60 @@
+{
+  "environment": "staging",
+  "region": "us-east-1",
+  "stackName": "spotty-potty-sense-staging",
+  "logLevel": "INFO",
+  "settings": {
+    "spotifyDefaultTimeoutMinutes": 5,
+    "motionDebounceMinutes": 2,
+    "tokenRefreshIntervalMinutes": 30,
+    "timeoutCheckIntervalMinutes": 1,
+    "sessionTTLDays": 30,
+    "enableXRayTracing": true,
+    "enableDetailedMetrics": true
+  },
+  "dynamodb": {
+    "billingMode": "PAY_PER_REQUEST",
+    "pointInTimeRecovery": true,
+    "deletionProtection": false
+  },
+  "lambda": {
+    "runtime": "python3.11",
+    "timeout": 30,
+    "memorySize": 256,
+    "reservedConcurrency": 10
+  },
+  "apiGateway": {
+    "throttling": {
+      "rateLimit": 500,
+      "burstLimit": 1000
+    },
+    "cors": {
+      "allowOrigins": ["https://staging.spottypotty.example.com"],
+      "allowMethods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      "allowHeaders": ["Content-Type", "Authorization", "X-Api-Key"]
+    }
+  },
+  "cognito": {
+    "passwordPolicy": {
+      "minimumLength": 10,
+      "requireUppercase": true,
+      "requireLowercase": true,
+      "requireNumbers": true,
+      "requireSymbols": true
+    },
+    "mfaConfiguration": "OPTIONAL",
+    "accountRecoverySetting": ["verified_email"]
+  },
+  "monitoring": {
+    "logRetentionDays": 30,
+    "createDashboard": true,
+    "alarmEmail": "alerts@example.com"
+  },
+  "tags": {
+    "Environment": "staging",
+    "Project": "SpottyPottySense",
+    "ManagedBy": "SAM",
+    "CostCenter": "Staging"
+  }
+}
+

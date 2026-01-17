@@ -1,0 +1,51 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iot:Connect"
+      ],
+      "Resource": [
+        "arn:aws:iot:*:*:client/${iot:Connection.Thing.ThingName}"
+      ],
+      "Condition": {
+        "Bool": {
+          "iot:Connection.Thing.IsAttached": "true"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iot:Publish"
+      ],
+      "Resource": [
+        "arn:aws:iot:*:*:topic/sensors/${iot:Connection.Thing.ThingName}/motion",
+        "arn:aws:iot:*:*:topic/sensors/${iot:Connection.Thing.ThingName}/status",
+        "arn:aws:iot:*:*:topic/sensors/${iot:Connection.Thing.ThingName}/register"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iot:Subscribe"
+      ],
+      "Resource": [
+        "arn:aws:iot:*:*:topicfilter/sensors/${iot:Connection.Thing.ThingName}/config",
+        "arn:aws:iot:*:*:topicfilter/sensors/${iot:Connection.Thing.ThingName}/commands"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iot:Receive"
+      ],
+      "Resource": [
+        "arn:aws:iot:*:*:topic/sensors/${iot:Connection.Thing.ThingName}/config",
+        "arn:aws:iot:*:*:topic/sensors/${iot:Connection.Thing.ThingName}/commands"
+      ]
+    }
+  ]
+}
+

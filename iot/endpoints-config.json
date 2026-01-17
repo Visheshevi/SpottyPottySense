@@ -1,0 +1,45 @@
+{
+  "description": "AWS IoT Core endpoint configuration for SpottyPottySense",
+  "endpoints": {
+    "development": {
+      "region": "us-east-2",
+      "endpointType": "iot:Data-ATS",
+      "endpointAddress": "YOUR_IOT_ENDPOINT.iot.us-east-1.amazonaws.com",
+      "port": 8883,
+      "protocol": "MQTTS",
+      "note": "Get actual endpoint with: aws iot describe-endpoint --endpoint-type iot:Data-ATS"
+    },
+    "staging": {
+      "region": "us-east-2",
+      "endpointType": "iot:Data-ATS",
+      "endpointAddress": "YOUR_IOT_ENDPOINT.iot.us-east-1.amazonaws.com",
+      "port": 8883,
+      "protocol": "MQTTS"
+    },
+    "production": {
+      "region": "us-east-2",
+      "endpointType": "iot:Data-ATS",
+      "endpointAddress": "YOUR_IOT_ENDPOINT.iot.us-east-1.amazonaws.com",
+      "port": 8883,
+      "protocol": "MQTTS"
+    }
+  },
+  "alternativePorts": {
+    "MQTT": 8883,
+    "MQTT_WebSocket": 443,
+    "HTTPS": 443,
+    "ALPN": 443
+  },
+  "certificateAuthority": {
+    "name": "Amazon Root CA 1",
+    "url": "https://www.amazontrust.com/repository/AmazonRootCA1.pem",
+    "note": "Required for TLS connections"
+  },
+  "commands": {
+    "getEndpoint": "aws iot describe-endpoint --endpoint-type iot:Data-ATS --region us-east-1",
+    "testConnection": "mosquitto_pub -h YOUR_ENDPOINT -p 8883 --cert device.pem.crt --key private.pem.key --cafile AmazonRootCA1.pem -t test/topic -m 'test message'",
+    "listThings": "aws iot list-things",
+    "listPolicies": "aws iot list-policies"
+  }
+}
+

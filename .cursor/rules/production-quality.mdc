@@ -1,0 +1,5 @@
+---
+description: When writing code
+alwaysApply: false
+---
+The code should be production quality, it should not have hardcoded values, it should not contain any credentials. The code should follow coding best practices
