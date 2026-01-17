@@ -683,14 +683,57 @@ Resources:
   # ============================================================================
 
   # --------------------------------------------------------------------------
+  # CloudWatch Log Group for API Gateway Access Logs
+  # --------------------------------------------------------------------------
+  ApiGatewayAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/SpottyPottySense-${Environment}'
+      RetentionInDays: !If [IsProduction, 90, 7]
+
+  # --------------------------------------------------------------------------
+  # IAM Role for API Gateway to write to CloudWatch Logs
+  # --------------------------------------------------------------------------
+  ApiGatewayCloudWatchRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'SpottyPottySense-APIGateway-CloudWatch-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: SpottyPottySense
+
+  # --------------------------------------------------------------------------
+  # API Gateway Account (Global setting for CloudWatch logging)
+  # --------------------------------------------------------------------------
+  ApiGatewayAccount:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn: !GetAtt ApiGatewayCloudWatchRole.Arn
+
+  # --------------------------------------------------------------------------
   # API Gateway with Cognito Authorizer
   # --------------------------------------------------------------------------
   ApiGatewayApi:
     Type: AWS::Serverless::Api
+    DependsOn: ApiGatewayAccount
     Properties:
       Name: !Sub 'SpottyPottySense-API-${Environment}'
       StageName: !Ref Environment
       TracingEnabled: !If [EnableXRay, true, false]
+      AccessLogSetting:
+        DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
+        Format: '$context.requestId $context.extendedRequestId $context.identity.sourceIp $context.requestTime $context.httpMethod $context.path $context.protocol $context.status $context.responseLength $context.error.message $context.error.messageString $context.integrationErrorMessage'
       Cors:
         AllowOrigin: !If [IsProduction, "'https://app.spottypotty.example.com'", "'*'"]
         AllowHeaders: "'Content-Type,Authorization,X-Api-Key'"
@@ -836,6 +879,12 @@ Outputs:
     Value: !Sub 'https://${ApiGatewayApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
     Export:
       Name: !Sub '${AWS::StackName}-ApiUrl'
+
+  ApiGatewayAccessLogGroupName:
+    Description: API Gateway access log group name
+    Value: !Ref ApiGatewayAccessLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiAccessLogGroup'
 
   # Cognito
   UserPoolId:
