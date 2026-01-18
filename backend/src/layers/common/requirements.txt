@@ -1,9 +1,26 @@
-# Lambda Layer Dependencies
-# These will be added in Phase 2 when we implement full logic
+# ============================================================================
+# Lambda Layer Dependencies - Phase 2.1
+# ============================================================================
+# 
+# This file specifies all Python dependencies for the common Lambda layer.
+# The layer is shared across all Lambda functions for code reuse.
+#
+# Note: boto3 and botocore are pre-installed in AWS Lambda Python runtime
+#       and are NOT included here to reduce layer size and avoid conflicts.
+#
+# Installation: pip install -r requirements.txt -t python/
+# ============================================================================
 
-# For Phase 1, layer uses only Python standard library
-# Phase 2 will add:
-# - boto3 (AWS SDK)
-# - requests (HTTP client)
-# - pydantic (data validation)
+# HTTP Requests Library (for Spotify API calls)
+requests>=2.31.0,<3.0.0
+
+# Data Validation with Pydantic v2
+pydantic>=2.5.0,<3.0.0
+email-validator>=2.1.0
+
+# AWS Lambda Powertools for Python (structured logging, metrics, tracing)
+aws-lambda-powertools>=2.30.0,<3.0.0
+
+# Date/time utilities (if not available in standard lib)
+python-dateutil>=2.8.2
 
