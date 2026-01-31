@@ -1,1 +1,1 @@
-{"statusCode": 200, "action": "motion_detected", "sensorId": "test-001", "timestamp": 1768771864, "message": "STUB: Motion event received successfully", "note": "Full implementation will be added in Phase 2"}
+{"statusCode": 200, "timestamp": "2026-01-18T21:59:31.455378", "statistics": {"users_queried": 0, "tokens_refreshed": 0, "tokens_skipped": 0, "failures": 0, "errors": []}, "duration_ms": 1497.17}
