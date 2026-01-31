@@ -1,0 +1,10 @@
+{
+  "sensorId": "test-sensor-001",
+  "event": "motion_detected",
+  "timestamp": 1705537200,
+  "metadata": {
+    "batteryLevel": 85,
+    "signalStrength": -45,
+    "firmwareVersion": "1.0.0"
+  }
+}

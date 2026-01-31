@@ -27,8 +27,8 @@ from enum import Enum
 from pydantic import (
     BaseModel,
     Field,
-    validator,
-    root_validator,
+    field_validator,
+    model_validator,
     EmailStr,
     HttpUrl,
     constr,
@@ -115,13 +115,13 @@ class QuietHours(SpottyPottySenseBaseModel):
     enabled: bool = Field(False, description="Whether quiet hours are enabled")
     start_time: Optional[str] = Field(
         None,
-        regex=r"^([01]\d|2[0-3]):([0-5]\d)$",
+        pattern=r"^([01]\d|2[0-3]):([0-5]\d)$",
         description="Start time in HH:MM format (24-hour)",
         example="22:00"
     )
     end_time: Optional[str] = Field(
         None,
-        regex=r"^([01]\d|2[0-3]):([0-5]\d)$",
+        pattern=r"^([01]\d|2[0-3]):([0-5]\d)$",
         description="End time in HH:MM format (24-hour)",
         example="07:00"
     )
@@ -132,20 +132,21 @@ class QuietHours(SpottyPottySenseBaseModel):
         max_items=7
     )
     
-    @validator('days')
+    @field_validator('days')
+    @classmethod
     def validate_days(cls, v):
         """Validate days are in range 0-6."""
         if not all(0 <= day <= 6 for day in v):
             raise ValueError("Days must be between 0 (Monday) and 6 (Sunday)")
         return sorted(set(v))  # Remove duplicates and sort
     
-    @root_validator
-    def validate_times(cls, values):
+    @model_validator(mode='after')
+    def validate_times(self):
         """Validate that times are provided when enabled."""
-        if values.get('enabled'):
-            if not values.get('start_time') or not values.get('end_time'):
+        if self.enabled:
+            if not self.start_time or not self.end_time:
                 raise ValueError("start_time and end_time required when enabled=True")
-        return values
+        return self
 
 
 # ==============================================================================
@@ -167,7 +168,7 @@ class SpotifyPlaybackConfig(SpottyPottySenseBaseModel):
     device_id: Optional[str] = Field(None, description="Spotify device ID")
     playlist_uri: Optional[str] = Field(
         None,
-        regex=r"^spotify:(playlist|album|artist):[a-zA-Z0-9]+$",
+        pattern=r"^spotify:(playlist|album|artist):[a-zA-Z0-9]+$",
         description="Spotify playlist/album/artist URI",
         example="spotify:playlist:37i9dQZF1DXcBWIGoYBM5M"
     )
@@ -195,7 +196,7 @@ class Sensor(SpottyPottySenseBaseModel):
     """
     
     # Primary key
-    sensor_id: constr(min_length=1, max_length=128, regex=r"^[a-zA-Z0-9_-]+$") = Field(
+    sensor_id: constr(min_length=1, max_length=128, pattern=r"^[a-zA-Z0-9_-]+$") = Field(
         ...,
         description="Unique sensor identifier",
         example="sensor-bathroom-001"
@@ -283,7 +284,8 @@ class Sensor(SpottyPottySenseBaseModel):
         description="Last communication from sensor"
     )
     
-    @validator('updated_at', always=True)
+    @field_validator('updated_at', mode='before')
+    @classmethod
     def set_updated_at(cls, v):
         """Always update the updated_at timestamp."""
         return datetime.utcnow()
@@ -372,7 +374,8 @@ class User(SpottyPottySenseBaseModel):
     # Status
     active: bool = Field(True, description="Whether account is active")
     
-    @validator('updated_at', always=True)
+    @field_validator('updated_at', mode='before')
+    @classmethod
     def set_updated_at(cls, v):
         """Always update the updated_at timestamp."""
         return datetime.utcnow()
@@ -456,13 +459,13 @@ class Session(SpottyPottySenseBaseModel):
         description="Unix timestamp for DynamoDB TTL"
     )
     
-    @validator('duration_minutes', always=True)
-    def calculate_duration(cls, v, values):
+    @model_validator(mode='after')
+    def calculate_duration(self):
         """Calculate duration if end_time is set."""
-        if values.get('end_time') and values.get('start_time'):
-            delta = values['end_time'] - values['start_time']
-            return round(delta.total_seconds() / 60, 2)
-        return v
+        if self.end_time and self.start_time:
+            delta = self.end_time - self.start_time
+            self.duration_minutes = round(delta.total_seconds() / 60, 2)
+        return self
 
 
 # ==============================================================================
@@ -546,7 +549,7 @@ class MotionEvent(SpottyPottySenseBaseModel):
 class CreateSensorRequest(SpottyPottySenseBaseModel):
     """API request to create a new sensor."""
     
-    sensor_id: constr(min_length=1, max_length=128, regex=r"^[a-zA-Z0-9_-]+$")
+    sensor_id: constr(min_length=1, max_length=128, pattern=r"^[a-zA-Z0-9_-]+$")
     name: constr(min_length=1, max_length=128)
     location: constr(min_length=1, max_length=256)
     description: Optional[constr(max_length=512)] = None
