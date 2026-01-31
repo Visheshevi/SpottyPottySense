@@ -97,17 +97,15 @@ def get_logger(
     service_name = service or SERVICE_NAME
     
     # Create logger with Powertools
-    logger = Logger(
+    # Note: Lambda Powertools Logger doesn't need child() for module names
+    # The service parameter provides sufficient context
+    new_logger = Logger(
         service=service_name,
         level=log_level,
         **kwargs
     )
     
-    # Set child logger name if provided
-    if name:
-        logger = logger.child(name=name)
-    
-    return logger
+    return new_logger
 
 
 def inject_lambda_context(

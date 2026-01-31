@@ -1,0 +1,14 @@
+{
+  "version": "0",
+  "id": "test-event-id",
+  "detail-type": "Scheduled Event",
+  "source": "aws.events",
+  "account": "123456789012",
+  "time": "2026-01-17T20:00:00Z",
+  "region": "us-east-2",
+  "resources": [
+    "arn:aws:events:us-east-2:123456789012:rule/token-refresh-schedule"
+  ],
+  "detail": {}
+}
+
