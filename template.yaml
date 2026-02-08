@@ -573,6 +573,13 @@ Resources:
                 - iot:AttachThingPrincipal
                 - iot:AttachPolicy
                 - iot:DescribeThing
+                - iot:DescribeEndpoint
+                - iot:ListThingPrincipals
+                - iot:DetachThingPrincipal
+                - iot:DetachPolicy
+                - iot:UpdateCertificate
+                - iot:DeleteCertificate
+                - iot:DeleteThing
               Resource: '*'
 
   # --------------------------------------------------------------------------

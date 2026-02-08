@@ -1,0 +1,10 @@
+{
+  "sensorId": "bathroom-test-002",
+  "location": "Test Bathroom 2",
+  "userId": "test-user-001",
+  "name": "Test Bathroom Sensor 2",
+  "spotifyDeviceId": "test-spotify-device",
+  "playlistUri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+  "timeoutMinutes": 5,
+  "motionDebounceMinutes": 2
+}
