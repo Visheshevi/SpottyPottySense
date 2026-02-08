@@ -1,0 +1,6 @@
+{
+  "action": "create_session",
+  "sensorId": "test-sensor-001",
+  "userId": "test-user-001",
+  "spotifyDeviceId": "test-device-001"
+}

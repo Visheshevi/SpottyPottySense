@@ -1,0 +1,1 @@
+{"statusCode": 200, "action": "get_session_analytics", "analytics": {"totalSessions": 1, "activeSessions": 1, "completedSessions": 0, "totalMotionEvents": 1, "totalDurationMinutes": 0, "averageDurationMinutes": 0, "averageMotionEventsPerSession": 1.0, "peakHour": 23, "sessionsWithPlayback": 0}, "duration_ms": 137.86, "timestamp": "2026-02-08T23:11:33.914713"}
