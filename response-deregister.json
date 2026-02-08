@@ -1,0 +1,1 @@
+{"statusCode": 200, "action": "deregister", "sensorId": "bathroom-test-002", "thingName": "SpottyPottySense-bathroom-test-002", "message": "Device bathroom-test-002 deregistered successfully", "cleanup": {"certificates_detached": 1, "certificates_deleted": 1, "thing_deleted": true, "dynamodb_deleted": true}, "duration_ms": 438.08, "timestamp": "2026-02-08T23:37:14.281266"}
