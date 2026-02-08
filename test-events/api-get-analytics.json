@@ -1,0 +1,21 @@
+{
+  "httpMethod": "GET",
+  "path": "/analytics",
+  "pathParameters": null,
+  "queryStringParameters": {
+    "startDate": "2026-01-01T00:00:00Z",
+    "endDate": "2026-02-08T23:59:59Z"
+  },
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": null,
+  "requestContext": {
+    "authorizer": {
+      "claims": {
+        "sub": "test-user-001",
+        "email": "test@example.com"
+      }
+    }
+  }
+}

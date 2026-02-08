@@ -1,0 +1,20 @@
+{
+  "httpMethod": "GET",
+  "path": "/sensors",
+  "pathParameters": null,
+  "queryStringParameters": {
+    "limit": "10"
+  },
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": null,
+  "requestContext": {
+    "authorizer": {
+      "claims": {
+        "sub": "test-user-001",
+        "email": "test@example.com"
+      }
+    }
+  }
+}

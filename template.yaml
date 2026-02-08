@@ -601,8 +601,9 @@ Resources:
           SENSORS_TABLE: !Ref SensorsTable
           USERS_TABLE: !Ref UsersTable
           SESSIONS_TABLE: !Ref SessionsTable
-          EVENTS_TABLE: !Ref MotionEventsTable
-          SPOTIFY_CREDENTIALS_SECRET: !Ref SpotifyClientCredentialsSecret
+          MOTION_EVENTS_TABLE: !Ref MotionEventsTable
+          SPOTIFY_SECRET_NAME: spotty-potty-sense/spotify/users
+          DEVICE_REGISTRATION_FUNCTION_NAME: !Ref DeviceRegistrationFunction
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SensorsTable
@@ -620,6 +621,11 @@ Resources:
               Resource:
                 - !Ref SpotifyClientCredentialsSecret
                 - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:spotty-potty-sense/spotify/users/*'
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource:
+                - !GetAtt DeviceRegistrationFunction.Arn
       Events:
         # Sensor endpoints
         ListSensors:
