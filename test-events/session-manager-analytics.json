@@ -1,0 +1,4 @@
+{
+  "action": "get_session_analytics",
+  "sensorId": "test-sensor-001"
+}
