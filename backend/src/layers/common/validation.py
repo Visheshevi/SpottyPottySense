@@ -36,6 +36,14 @@ from pydantic import (
     confloat
 )
 
+# Import and re-export exception classes for convenience
+from exceptions import (
+    ValidationError,
+    ResourceNotFoundError,
+    AuthorizationError,
+    SpottyPottySenseError
+)
+
 
 # ==============================================================================
 # ENUMERATIONS
