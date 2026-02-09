@@ -1,0 +1,122 @@
+# Artillery Load Testing Configuration for SpottyPottySense API
+# Run with: artillery run load-testing/artillery-config.yml
+
+config:
+  target: "https://YOUR_API_GATEWAY_URL"  # Update with actual API Gateway URL
+  phases:
+    # Warm-up phase
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up"
+    
+    # Ramp up phase
+    - duration: 120
+      arrivalRate: 5
+      rampTo: 50
+      name: "Ramp up load"
+    
+    # Sustained load phase
+    - duration: 300
+      arrivalRate: 50
+      name: "Sustained load"
+    
+    # Spike test
+    - duration: 60
+      arrivalRate: 100
+      name: "Spike test"
+    
+    # Cool down
+    - duration: 60
+      arrivalRate: 10
+      name: "Cool down"
+  
+  # JWT token for authentication (update with actual token)
+  variables:
+    authToken: "YOUR_JWT_TOKEN_HERE"
+  
+  # Request defaults
+  defaults:
+    headers:
+      Authorization: "Bearer {{ authToken }}"
+      Content-Type: "application/json"
+  
+  # Performance thresholds
+  ensure:
+    maxErrorRate: 1  # Max 1% error rate
+    p95: 2000  # 95th percentile response time < 2s
+    p99: 5000  # 99th percentile response time < 5s
+
+# Test scenarios
+scenarios:
+  # Scenario 1: Read-heavy workload
+  - name: "Read-heavy API operations"
+    weight: 70
+    flow:
+      - get:
+          url: "/sensors"
+          qs:
+            limit: 20
+      - think: 1
+      
+      - get:
+          url: "/analytics"
+          qs:
+            startDate: "2026-01-01T00:00:00Z"
+            endDate: "2026-02-09T23:59:59Z"
+      - think: 2
+      
+      - get:
+          url: "/sessions"
+          qs:
+            limit: 10
+      - think: 1
+      
+      - get:
+          url: "/users/me"
+  
+  # Scenario 2: Write operations
+  - name: "Write operations"
+    weight: 20
+    flow:
+      - put:
+          url: "/sensors/{{ $randomString() }}"
+          json:
+            name: "Load Test Sensor {{ $randomNumber(1, 1000) }}"
+            timeoutMinutes: 5
+            isActive: true
+      
+      - think: 2
+      
+      - put:
+          url: "/users/me"
+          json:
+            notificationsEnabled: true
+  
+  # Scenario 3: Mixed operations
+  - name: "Mixed operations"
+    weight: 10
+    flow:
+      - get:
+          url: "/sensors"
+      
+      - think: 1
+      
+      - get:
+          url: "/spotify/devices"
+      
+      - think: 2
+      
+      - get:
+          url: "/analytics"
+      
+      - think: 1
+      
+      - put:
+          url: "/users/me"
+          json:
+            name: "Load Test User"
+
+# Plugins for enhanced reporting
+plugins:
+  expect: {}
+  metrics-by-endpoint: {}
