@@ -277,3 +277,21 @@ samconfig.local.toml
 analytics/
 metrics.json
 stats.json
+
+# ============================================================================
+# Hardware / ESP8266 (CRITICAL SECURITY)
+# ============================================================================
+# ESP8266 Certificates - NEVER COMMIT THESE
+hardware/esp8266-sensor/certificates.h
+hardware/**/*.pem
+hardware/**/*.key
+hardware/**/*.crt
+hardware/**/config.h.local
+hardware/data/
+*.csr
+
+# Arduino build artifacts
+hardware/**/*.hex
+hardware/**/*.elf
+hardware/**/*.bin
+hardware/**/*.map
