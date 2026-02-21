@@ -1,7 +1,15 @@
 /**
  * SpottyPottySense Configuration
  * 
- * Update these settings before uploading firmware.
+ * This file contains DEFAULT settings that are safe to commit to git.
+ * 
+ * FOR LOCAL CONFIGURATION:
+ * 1. Copy config.example.local.h to config.local.h
+ * 2. Edit config.local.h with your actual credentials
+ * 3. config.local.h is gitignored (never committed)
+ * 4. Upload - config.local.h automatically overrides these defaults
+ * 
+ * ⚠️ DO NOT put real credentials in this file!
  */
 
 #ifndef CONFIG_H
@@ -14,28 +22,32 @@
 #define FIRMWARE_VERSION "1.0.0"
 
 // ============================================================================
-// WIFI CONFIGURATION
+// DEFAULT CONFIGURATION (Override in config.local.h)
 // ============================================================================
 
-// TODO: Update with your WiFi credentials
-#define WIFI_SSID "YOUR_WIFI_SSID"
-#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
+// WiFi Configuration - DEFAULTS
+#ifndef WIFI_SSID
+  #define WIFI_SSID "YOUR_WIFI_SSID"
+#endif
+
+#ifndef WIFI_PASSWORD
+  #define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
+#endif
 
 // WiFi connection timeout (milliseconds)
 #define WIFI_CONNECT_TIMEOUT 30000  // 30 seconds
 
 // ============================================================================
-// AWS IOT CONFIGURATION
+// AWS IOT CONFIGURATION - DEFAULTS
 // ============================================================================
 
-// TODO: Update with your AWS IoT Core endpoint
-// Get from: AWS IoT Console → Settings → Device data endpoint
-// Example: "a3rro0nxekkodu-ats.iot.us-east-2.amazonaws.com"
-#define AWS_IOT_ENDPOINT "YOUR_AWS_IOT_ENDPOINT.iot.REGION.amazonaws.com"
+#ifndef AWS_IOT_ENDPOINT
+  #define AWS_IOT_ENDPOINT "YOUR_IOT_ENDPOINT.iot.REGION.amazonaws.com"
+#endif
 
-// TODO: Update with your sensor ID
-// Must match the sensor registered in AWS
-#define SENSOR_ID "YOUR_SENSOR_ID"
+#ifndef SENSOR_ID
+  #define SENSOR_ID "YOUR_SENSOR_ID"
+#endif
 
 // MQTT Configuration
 #define MQTT_PORT 8883                    // AWS IoT uses port 8883 for MQTTS
@@ -101,5 +113,19 @@
 // TLS Configuration
 // Use BearSSL for better memory efficiency on ESP8266
 #define USE_BEARSSL true
+
+// ============================================================================
+// LOCAL CONFIGURATION OVERRIDE
+// ============================================================================
+// If config.local.h exists, it will override the defaults above
+// This file is gitignored, so your credentials stay private
+
+#if __has_include("config.local.h")
+  #include "config.local.h"
+  #pragma message "✓ Using config.local.h for credentials"
+#else
+  #pragma message "⚠️ No config.local.h found - using defaults"
+  #pragma message "   Create one: cp config.example.local.h config.local.h"
+#endif
 
 #endif // CONFIG_H

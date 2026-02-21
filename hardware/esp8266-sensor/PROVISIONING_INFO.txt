@@ -1,0 +1,45 @@
+╔════════════════════════════════════════════════════════════════╗
+║         Device Provisioning Complete!                         ║
+╚════════════════════════════════════════════════════════════════╝
+
+Device Information:
+───────────────────────────────────────────────────────────────
+Sensor ID:      bathroom-main
+Location:       Main Bathroom
+User ID:        your-user-id
+Thing Name:     SpottyPottySense-bathroom-main
+IoT Endpoint:   a3rro0nxekkodu-ats.iot.us-east-2.amazonaws.com
+
+Files Generated:
+───────────────────────────────────────────────────────────────
+✓ device-cert.pem       - Device certificate
+✓ private-key.pem       - Private key
+✓ root-ca.pem           - Amazon Root CA
+✓ certificates.h        - Arduino header file
+
+Next Steps:
+───────────────────────────────────────────────────────────────
+1. Update config.h with these values:
+
+   #define WIFI_SSID "YourWiFiSSID"
+   #define WIFI_PASSWORD "YourWiFiPassword"
+   #define AWS_IOT_ENDPOINT "a3rro0nxekkodu-ats.iot.us-east-2.amazonaws.com"
+   #define SENSOR_ID "bathroom-main"
+
+2. Open Arduino IDE:
+   File → Open → hardware/esp8266-sensor/esp8266-sensor.ino
+
+3. Upload firmware:
+   Tools → Board → NodeMCU 1.0
+   Tools → Port → Select your port
+   Sketch → Upload
+
+4. Open Serial Monitor (115200 baud) to verify
+
+Security Reminder:
+───────────────────────────────────────────────────────────────
+⚠️  NEVER commit certificates.h to git
+⚠️  Keep private-key.pem secure
+⚠️  Certificates are added to .gitignore automatically
+
+Provisioned at: Sat Feb 21 13:32:08 CST 2026

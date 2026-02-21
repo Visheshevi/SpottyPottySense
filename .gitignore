@@ -295,3 +295,4 @@ hardware/**/*.hex
 hardware/**/*.elf
 hardware/**/*.bin
 hardware/**/*.map
+hardware/esp8266-sensor/config.local.h

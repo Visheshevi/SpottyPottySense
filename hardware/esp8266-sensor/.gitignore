@@ -10,12 +10,14 @@ certificates.h
 *.key
 *.crt
 
-# Configuration with credentials
+# Local configuration with credentials (CRITICAL!)
+config.local.h
 config.h.local
 secrets.h
 
 # Device-specific config backups
 config_*.h
+config.*.h
 
 # ============================================================================
 # Arduino IDE
