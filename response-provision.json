@@ -1,1 +1,0 @@
-{"statusCode": 400, "error": "ValidationError", "message": "Sensor with ID 'bathroom-main' already exists (Code: VALIDATION_ERROR, Details: {'field': 'sensorId'})"}

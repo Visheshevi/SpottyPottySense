@@ -533,6 +533,7 @@ def get_or_create_session(sensor_id: str, user_id: str) -> Dict[str, Any]:
     session_id = f"session-{sensor_id}-{int(time.time())}-{uuid.uuid4().hex[:8]}"
     
     now = datetime.utcnow()
+    now_timestamp = int(now.timestamp())
     ttl = int((now + timedelta(days=30)).timestamp())  # 30 days TTL
     
     session = {
@@ -540,8 +541,8 @@ def get_or_create_session(sensor_id: str, user_id: str) -> Dict[str, Any]:
         'sensorId': sensor_id,
         'userId': user_id,
         'status': 'active',
-        'startTime': now.isoformat(),
-        'lastMotionTime': now.isoformat(),
+        'startTime': now_timestamp,  # Unix timestamp as number
+        'lastMotionTime': now_timestamp,  # Unix timestamp as number
         'motionEventsCount': 1,
         'playbackStarted': False,
         'ttl': ttl
@@ -681,7 +682,7 @@ def update_sensor_state(sensor_id: str, event_time: datetime):
     dynamodb.update_item(
         key={'sensorId': sensor_id},
         updates={
-            'lastMotionTime': event_time.isoformat(),
+            'lastMotionTime': int(event_time.timestamp()),
             'updatedAt': datetime.utcnow().isoformat(),
             'status': 'active'
         }
@@ -710,7 +711,7 @@ def update_session(session_id: str, event_time: datetime):
     dynamodb.update_item(
         key={'sessionId': session_id},
         updates={
-            'lastMotionTime': event_time.isoformat(),
+            'lastMotionTime': int(event_time.timestamp()),
             'motionEventsCount': current_count + 1,
             'playbackStarted': True
         }

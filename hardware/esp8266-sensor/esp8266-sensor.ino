@@ -56,6 +56,8 @@ void setup() {
   Serial.println();
   
   // Initialize GPIO
+  // Note: D1 (GPIO5) doesn't support hardware pull-down.
+  // Use plain INPUT; firmware calibrates idle level at startup.
   pinMode(PIR_PIN, INPUT);
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH); // LED off (inverse logic)
@@ -303,60 +305,152 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 // ============================================================================
 
 void checkMotion() {
+  // Static state for auto-calibrated edge detection
+  static unsigned long lastDebugPrint = 0;
+  static bool calibrationStarted = false;
+  static bool calibrated = false;
+  static unsigned long calibrationStartMs = 0;
+  static unsigned long highSamples = 0;
+  static unsigned long lowSamples = 0;
+  static int idleState = LOW;      // Learned idle polarity
+  static int prevState = LOW;
+
+  const unsigned long CALIBRATION_MS = 3000;  // Learn idle level for first 3s
+
   int pirState = digitalRead(PIR_PIN);
-  
-  if (pirState == HIGH) {
+
+  if (!calibrationStarted) {
+    calibrationStarted = true;
+    calibrationStartMs = millis();
+    prevState = pirState;
+    Serial.println("[PIR] Calibrating idle state for 3 seconds...");
+    return;
+  }
+
+  if (!calibrated) {
+    if (pirState == HIGH) {
+      highSamples++;
+    } else {
+      lowSamples++;
+    }
+
+    if (millis() - calibrationStartMs >= CALIBRATION_MS) {
+      idleState = (highSamples >= lowSamples) ? HIGH : LOW;
+      calibrated = true;
+      prevState = pirState;
+
+      Serial.print("[PIR] Calibration complete. Idle state = ");
+      Serial.println(idleState == HIGH ? "HIGH" : "LOW");
+      if (idleState == HIGH) {
+        Serial.println("[PIR] Note: Sensor appears active-LOW or line is pulled HIGH");
+      }
+    }
+    return;
+  }
+
+  // Debug: Show PIR state every 10 seconds
+  if (millis() - lastDebugPrint > 10000) {
+    Serial.print("[PIR Debug] Current state: ");
+    Serial.print(pirState == HIGH ? "HIGH" : "LOW");
+    Serial.print(" (idle=");
+    Serial.print(idleState == HIGH ? "HIGH" : "LOW");
+    Serial.print(", prev=");
+    Serial.print(prevState == HIGH ? "HIGH" : "LOW");
+    Serial.println(")");
+    lastDebugPrint = millis();
+  }
+
+  // Trigger when sensor leaves learned idle state
+  if (prevState == idleState && pirState != idleState) {
+    Serial.print("[PIR] Motion edge: ");
+    Serial.print(prevState == HIGH ? "HIGH" : "LOW");
+    Serial.print(" -> ");
+    Serial.println(pirState == HIGH ? "HIGH" : "LOW");
+
     unsigned long now = millis();
-    
-    // Debounce: Only publish if enough time has passed
-    if (now - lastMotionTime > DEBOUNCE_TIME || lastMotionTime == 0) {
+    unsigned long timeSinceLastMotion = (lastMotionTime == 0) ? 999999 : (now - lastMotionTime);
+
+    // Debounce: Only publish if enough time has passed since last motion
+    if (timeSinceLastMotion > DEBOUNCE_TIME || lastMotionTime == 0) {
       Serial.println();
       Serial.println("═══════════════════════════════════════════════════════");
       Serial.println("[Motion] ⚡ MOTION DETECTED!");
+      Serial.print("[Motion] Time since last: ");
+      Serial.print(timeSinceLastMotion / 1000);
+      Serial.println("s");
       Serial.println("═══════════════════════════════════════════════════════");
       
-      // Publish motion event
-      publishMotionEvent();
+      // Check MQTT connection before publishing
+      if (!mqttClient.connected()) {
+        Serial.println("[MQTT] ⚠ Not connected! Attempting reconnect...");
+        connectAWSIoT();
+        delay(1000);
+      }
+      
+      if (mqttClient.connected()) {
+        Serial.println("[MQTT] Connection verified, publishing event...");
+        publishMotionEvent();
+      } else {
+        Serial.println("[MQTT] ✗ Cannot publish - still disconnected");
+      }
       
       // Update last motion time
       lastMotionTime = now;
       
       // LED feedback
       flashLED(2, 100);
+    } else {
+      // Motion detected but within debounce window
+      Serial.print("[Motion] ⏱️  Rising edge detected but debounced (");
+      Serial.print(timeSinceLastMotion / 1000);
+      Serial.print("s ago, need ");
+      Serial.print(DEBOUNCE_TIME / 1000);
+      Serial.println("s)");
     }
   }
+
+  // Helpful state transition logs
+  if (prevState != pirState && pirState == idleState) {
+    Serial.println("[PIR] Returned to idle state");
+  }
+
+  prevState = pirState;
 }
 
 void publishMotionEvent() {
   // Build MQTT topic
   String topic = String("sensors/") + SENSOR_ID + "/motion";
   
-  // Create JSON payload
+  // Create JSON payload (simplified for reliability)
   StaticJsonDocument<256> doc;
   doc["sensorId"] = SENSOR_ID;
   doc["event"] = "motion_detected";
   doc["timestamp"] = getISO8601Time();
   doc["rssi"] = WiFi.RSSI();
   
-  // Add metadata
-  JsonObject metadata = doc.createNestedObject("metadata");
-  metadata["firmware"] = FIRMWARE_VERSION;
-  metadata["uptime"] = millis() / 1000;
-  metadata["freeHeap"] = ESP.getFreeHeap();
+  // Serialize to NULL-terminated string
+  char buffer[256];
+  serializeJson(doc, buffer);
   
-  // Serialize to string
-  char buffer[512];
-  size_t len = serializeJson(doc, buffer);
+  Serial.print("[MQTT] Publishing to: ");
+  Serial.println(topic);
+  Serial.print("[MQTT] Payload (");
+  Serial.print(strlen(buffer));
+  Serial.print(" bytes): ");
+  Serial.println(buffer);
   
-  // Publish to AWS IoT
-  if (mqttClient.publish(topic.c_str(), buffer, len)) {
-    Serial.println("[MQTT] ✓ Motion event published");
-    Serial.print("[MQTT] Topic: ");
-    Serial.println(topic);
-    Serial.print("[MQTT] Payload: ");
-    Serial.println(buffer);
+  // Publish to AWS IoT (without explicit length - let library handle it)
+  if (mqttClient.publish(topic.c_str(), buffer)) {
+    Serial.println("[MQTT] ✓ Motion event published successfully");
   } else {
     Serial.println("[MQTT] ✗ Failed to publish motion event");
+    Serial.print("[MQTT] Connection state: ");
+    Serial.println(mqttClient.state());
+    
+    // Check MQTT connection
+    if (!mqttClient.connected()) {
+      Serial.println("[MQTT] Lost connection, will reconnect on next loop");
+    }
   }
 }
 

@@ -6,7 +6,7 @@ Device Information:
 ───────────────────────────────────────────────────────────────
 Sensor ID:      bathroom-main
 Location:       Main Bathroom
-User ID:        your-user-id
+User ID:        spotify:22ouf7ogdosi54aixkiitc7gy
 Thing Name:     SpottyPottySense-bathroom-main
 IoT Endpoint:   a3rro0nxekkodu-ats.iot.us-east-2.amazonaws.com
 
@@ -42,4 +42,4 @@ Security Reminder:
 ⚠️  Keep private-key.pem secure
 ⚠️  Certificates are added to .gitignore automatically
 
-Provisioned at: Sat Feb 21 13:32:08 CST 2026
+Provisioned at: Sat Feb 21 23:04:10 CST 2026
