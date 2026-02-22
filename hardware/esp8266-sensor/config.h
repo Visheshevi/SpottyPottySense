@@ -69,7 +69,7 @@
 #define LED_PIN LED_BUILTIN               // Status LED (GPIO2)
 
 // Motion Detection
-#define DEBOUNCE_TIME 120000              // 2 minutes in milliseconds
+#define DEBOUNCE_TIME 10000              // 2 minutes in milliseconds
                                           // Prevents rapid re-triggering
                                           // Adjust based on your needs:
                                           // - 60000  = 1 minute

@@ -23,6 +23,11 @@
 // GLOBAL OBJECTS
 // ============================================================================
 
+// BearSSL certificate objects (must be global to persist)
+BearSSL::X509List awsCACert(AWS_ROOT_CA);
+BearSSL::X509List awsClientCert(AWS_DEVICE_CERT);
+BearSSL::PrivateKey awsPrivateKey(AWS_PRIVATE_KEY);
+
 WiFiClientSecure wifiClient;
 PubSubClient mqttClient(wifiClient);
 
@@ -195,10 +200,9 @@ void syncTime() {
 void configureCertificates() {
   Serial.println("[TLS] Configuring certificates...");
   
-  // Set certificates for secure connection
-  wifiClient.setCACert(AWS_ROOT_CA);
-  wifiClient.setCertificate(AWS_DEVICE_CERT);
-  wifiClient.setPrivateKey(AWS_PRIVATE_KEY);
+  // Set certificates for secure connection (using global BearSSL objects)
+  wifiClient.setTrustAnchors(&awsCACert);
+  wifiClient.setClientRSACert(&awsClientCert, &awsPrivateKey);
   
   Serial.println("[TLS] ✓ Certificates configured");
 }
